@@ -44,7 +44,7 @@ int server_init() {
 	exit(1);
     }
     
-    printf("Listening on port 80...\n");
+    printf("Listening on port 8784...\n");
     return server_fd;
 }
 
@@ -93,7 +93,7 @@ void* client_connect() {
 
     //get cookie
     
-    //prep the http reponse
+    //prep the http response
 
     //close socket
 }
