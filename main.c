@@ -4,9 +4,13 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <sys/socket.h>
-
-int main() {
-    int server_fd = server_init(8784);
+#include <stdlib.h>
+int main(int argc, char** argv) {
+    if (argc == 1) {
+        printf("Usage: %s [port]\n",argv[0]);
+        exit(1);
+    }
+    int server_fd = server_init(atoi(argv[1]));
     while (1) {
         fd_set set;
         FD_ZERO(&set);
