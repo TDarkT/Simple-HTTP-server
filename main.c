@@ -3,24 +3,22 @@
 #include <sys/select.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <sys/socket.h>
 
-int signal = 1;
 int main() {
-    int server_fd = server_init();
-    int fl = fcntl(server_fd, F_GETFL, 0);
-    fl |= O_NONBLOCK;
-    fcntl(server_fd, F_SETFL, fl);
+    int server_fd = server_init(8784);
     while (1) {
         fd_set set;
-	FD_ZERO(&set);
+        FD_ZERO(&set);
         FD_SET(server_fd, &set);
-	select(server_fd+1, &set, NULL, NULL, NULL); 
+        select(server_fd+1, &set, NULL, NULL, NULL); 
         if (FD_ISSET(server_fd, &set)) {
-            signal = 1;
+            struct sockaddr_in client_addr;
+            socklen_t addr_length = sizeof(client_addr);
+            int client_fd  = accept(server_fd, (struct sockaddr *)&client_addr,&addr_length);
+            struct client cli = {.fd = client_fd, .addr = client_addr};
             pthread_t t;
-            int res;
-	    res = pthread_create(&t, NULL, client_connect, NULL);
-            while (signal) {};
+            pthread_create(&t, NULL, client_connect, (void*)&cli);
         }
     } 
     return 0;
