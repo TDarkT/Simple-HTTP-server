@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include "http.h"
+#include "file_lib.h"
 
 #define MAX_CONN 100
 
@@ -35,13 +36,13 @@ int server_init() {
     addr.sin_port = htons(8784);
 
     if (bind(server_fd, (struct sockaddr *)&addr, (socklen_t) sizeof(addr)) < 0) {
-	perror("Can't bind on port 80\n");
-	exit(1);
+        perror("Can't bind on port 80\n");
+        exit(1);
     }
     
     if (listen(server_fd, 0) == -1) {
-	perror("Can't listen on port 80\n");
-	exit(1);
+        perror("Can't listen on port 80\n");
+        exit(1);
     }
     
     printf("Listening on port 8784...\n");
@@ -50,7 +51,7 @@ int server_init() {
 
 void* client_connect() {
     
-    char buff[65536];
+    char buff[32565];
     //accept 
     struct sockaddr_in addr;
     socklen_t addr_length = sizeof(addr);
@@ -60,40 +61,36 @@ void* client_connect() {
     if (client_fd == -1) {
         perror("Oops! Something wrong\n");
     } else {
-        printf("Client connected\n");
+         // Receive client request 
         if (recv(client_fd, buff, sizeof(buff),0) > 0) {
-		struct http_header req_h;
-		req_h = parse_http_req(buff);
-		printf("%s\n", req_h.path);
-		FILE *fp;
-		char path[80] = ".";
-		strcat(path, req_h.path);
-		fp = fopen(path,"rb");
-		if (fp == NULL) send(client_fd, "HTTP/1.1 404 Not Found", 22, 0);
-		else {
-		    fseek(fp, 0L, SEEK_END);
-		    int size = ftell(fp);
-		    rewind(fp);
-		    fread(buff, 1, size, fp);
-		    fclose(fp);
-		    char *header;
-		    header = http_respone_200(NULL, size);
-		    strcat(header, buff);
-		    send(client_fd, header, strlen(header+1), 0);
-		}
-		shutdown(client_fd, SHUT_RDWR);
-		close(client_fd); 
+    	    struct http_header req_h;
+    	    req_h = parse_http_req(buff);
+    	    
+            FILE *fp;
+    	    char path[80] = ".";
+    	    strcat(path, req_h.path);
+            // Get requested file
+    	    fp = fopen(path,"rb");
+    	    if (fp == NULL) {
+                fp = fopen("./404.html", "rb");
+    	        int size = get_file_size(fp);
+                char *data = get_file_content(fp, size);
+                char *header = http_respone_404(req_h, NULL, size);
+                strcat(header, data);
+                send(client_fd, header, strlen(header), 0);
+                free(data);
+                free(header);
+            } else {
+    	        int size = get_file_size(fp);
+                char *data = get_file_content(fp, size);
+                char *header = http_respone_200(req_h, NULL, size);
+    	        strcat(header, data);
+	            send(client_fd, header, strlen(header), 0);
+                free(data);
+                free(header);
+	         }
+    	     shutdown(client_fd, SHUT_RDWR);
+    	     close(client_fd); 
         }
     }  
-    //parse http request
-
-    //get url path 
-
-    //get file
-
-    //get cookie
-    
-    //prep the http response
-
-    //close socket
 }
