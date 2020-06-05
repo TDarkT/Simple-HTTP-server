@@ -12,6 +12,7 @@ struct http_header {
 };
 
 struct http_header parse_http_req(char *buff);
-char* http_respone_200(char *data, int size);
+char* http_respone_200(struct http_header req, char *data, int size);
 
+char* http_respone_404(struct http_header req, char *data, int size);
 #endif

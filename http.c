@@ -1,12 +1,14 @@
 #include "http.h"
+#include "cookie.h"
 #include <time.h>
-
+#include <stdlib.h>
 struct http_header parse_http_req(char* buff) {
      struct http_header h;
      int length = 0;
      
      char* path = strtok(buff, "\n");
      h.request = strdup(path);
+     h.request = strtok(h.request, "\r");
      path = path+4;
      
      while (*(path+length) != ' ') length++;
@@ -17,16 +19,45 @@ struct http_header parse_http_req(char* buff) {
      return h;
      
 }
-
-char* http_respone_200(char* data,int size) {
+struct tm *get_current_time() {
      time_t now;
      struct tm *ptm;
-     char time_str[100];
-     char *header =(char*) malloc(1000);
      time(&now);
      ptm = gmtime(&now);
-      
+     return ptm;
+
+}
+
+void http_logging(struct http_header req, struct tm *t, int size, int status) {
+    char time_str[100];
+    strftime(time_str,100, "%d/%b/%Y:%H:%M:%S %z", t);
+    printf("[%s] \"%s\" %d %d\n",time_str, req.request,status, size); 
+}
+
+char* http_respone_200(struct http_header req, char* data,int size) {
+     struct tm *ptm = get_current_time();
+     char time_str[100];
+     char *header = malloc(1000);
      strftime(time_str, 100, "%a, %d %b %G %T GMT", ptm);
+     
      sprintf(header, "HTTP/1.1 200 OK \nDate:%s\nServer:USTH\nContent-Length: %d\nContent-type: text/html\nConnection: Closed\n\n", time_str, size);
+     
+     header = realloc(header, strlen(header)+size+1);
+     http_logging(req, ptm, strlen(header)+size, 200);
      return header;
 }
+
+char* http_respone_404(struct http_header req, char* data,int size) {
+     struct tm *ptm = get_current_time();
+     char time_str[100];
+     char *header = malloc(1000);
+     strftime(time_str, 100, "%a, %d %b %G %T GMT", ptm);
+     
+     sprintf(header, "HTTP/1.1 404 Not Found \nDate:%s\nServer:USTH\nContent-Length: %d\nContent-type: text/html\nConnection: Closed\n\n", time_str, size);
+     
+     header = realloc(header, strlen(header)+size+1);
+     http_logging(req, ptm,strlen(header)+size, 404);
+     return header;
+}
+
+
