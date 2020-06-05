@@ -2,10 +2,14 @@
 #include "cookie.h"
 #include <time.h>
 #include <stdlib.h>
-struct http_header parse_http_req(char* buff) {
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
+struct http_header parse_http_req(char* buff,struct sockaddr_in addr) {
      struct http_header h;
      int length = 0;
      
+     h.ip = inet_ntoa(addr.sin_addr);
      char* path = strtok(buff, "\n");
      h.request = strdup(path);
      h.request = strtok(h.request, "\r");
@@ -31,7 +35,7 @@ struct tm *get_current_time() {
 void http_logging(struct http_header req, struct tm *t, int size, int status) {
     char time_str[100];
     strftime(time_str,100, "%d/%b/%Y:%H:%M:%S %z", t);
-    printf("[%s] \"%s\" %d %d\n",time_str, req.request,status, size); 
+    printf("%s [%s] \"%s\" %d %d\n",req.ip, time_str, req.request,status, size); 
 }
 
 char* http_respone_200(struct http_header req, char* data,int size) {
