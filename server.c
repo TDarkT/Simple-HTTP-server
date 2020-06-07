@@ -64,12 +64,13 @@ void* client_connect(void *arg) {
     	    struct http_header req_h;
     	    req_h = parse_http_req(buff,addr);
     	    
-            FILE *fp;
+            
     	    char path[80] = ".";
     	    strcat(path, req_h.path);
             // Get requested file
-    	    fp = fopen(path,"rb");
-    	    if (fp == NULL) {
+    	    char *f_data = get_file(path); 
+    	    if (f_data == NULL) {
+                FILE *fp;
                 fp = fopen("./404.html", "rb");
     	        int size = get_file_size(fp);
                 char *data = get_file_content(fp, size);
@@ -78,10 +79,10 @@ void* client_connect(void *arg) {
                 send(client_fd, header, strlen(header), 0);
                 
             } else {
-    	        int size = get_file_size(fp);
-                char *data = get_file_content(fp, size);
+    	        int size = strlen(f_data);
+                //char *data = get_file_content(fp, size);
                 char *header = http_respone_200(req_h, NULL, size);
-    	        strcat(header, data);
+    	        strcat(header, f_data);
 	            send(client_fd, header, strlen(header), 0);
              }
     	     shutdown(client_fd, SHUT_RDWR);
