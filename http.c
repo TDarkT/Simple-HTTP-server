@@ -8,18 +8,22 @@
 struct http_header parse_http_req(char* buff,struct sockaddr_in addr) {
      struct http_header h;
      int length = 0;
-     
      h.ip = inet_ntoa(addr.sin_addr);
-     char* path = strtok(buff, "\n");
-     h.request = strdup(path);
-     h.request = strtok(h.request, "\r");
-     path = path+4;
-     
-     while (*(path+length) != ' ') length++;
+     char* header;
+     char* headers[30];
+     int i = 0;
+     header = strtok(buff, "\n");
+     while (header !=NULL) {
+         headers[i++] = header;
+         header = strtok(NULL, "\n");
+     }
+     while (*(headers[0]+4+length) != ' ') length++;
+     h.request = headers[0];
+     h.request[strlen(h.request) - 1] ='\0';
      h.path = (char*) malloc(length+1);
-     strncpy(h.path, path, length);
+     strncpy(h.path, h.request+4, length);
      h.path[length] = '\0';
-     //printf("%d %s\n",length, h.path);
+     
      return h;
      
 }
@@ -57,7 +61,7 @@ char* http_respone_404(struct http_header req, char* data,int size) {
      char *header = malloc(1000);
      strftime(time_str, 100, "%a, %d %b %G %T GMT", ptm);
      
-     sprintf(header, "HTTP/1.1 404 Not Found \nDate:%s\nServer:USTH\nContent-Length: %d\nContent-type: text/html\nConnection: Closed\n\n", time_str, size);
+     sprintf(header, "HTTP/1.1 404 Not Found \nDate:%s\nServer:USTH\nContent-Length: %d\nContent-type: text/html\nSet-Cookie: name=USTH; Max-Age=86400\nConnection: Closed\n\n", time_str, size);
      
      header = realloc(header, strlen(header)+size+1);
      http_logging(req, ptm,strlen(header)+size, 404);
