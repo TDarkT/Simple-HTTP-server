@@ -8,56 +8,55 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <errno.h>
-struct sockaddr_in fserver_addr;
+#include "file_lib.h"
 struct hostent *host;
-int fserver_fd;
 
-int init_fserver_sk(char *ip) {
+struct socket_t init_fserver_sk(char *ip) {
     host = gethostbyname(ip);
     if (host == NULL) {
         printf("Error: invalid ip for file server");
         exit(1);
     }
-    int yes =1;
+    struct sockaddr_in fserver_addr;
     memset(&fserver_addr, 0, sizeof(fserver_addr));
     fserver_addr.sin_family = AF_INET;
     fserver_addr.sin_addr = *(struct in_addr *)host->h_addr_list[0];
     fserver_addr.sin_port = htons(8080);
 
-    fserver_fd = socket(AF_INET, SOCK_STREAM, 0);
-    return fserver_fd;
+    int fserver_fd = socket(AF_INET, SOCK_STREAM, 0);
+    struct socket_t soc = { .fd = fserver_fd, .addr = fserver_addr };
+    return soc;
 }
 
-char *get_file(char* filename) {
+struct file get_file(char* filename) {
+    struct file f;
     char* file_data = NULL; 
+    struct socket_t fserver_soc = init_fserver_sk("127.0.0.1");
+    int fserver_fd = fserver_soc.fd;
+    struct sockaddr_in fserver_addr = fserver_soc.addr;
     if (connect(fserver_fd, (struct sockaddr *) &fserver_addr, sizeof(fserver_addr)) == 0) {
-        printf("Getting requested file\n");
-        if (setsockopt(fserver_fd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, 4) == -1);
-            fprintf(stderr, "%s\n", strerror(errno));
-        int fl = fcntl(fserver_fd, F_GETFL, 0);
-        fl |= O_NONBLOCK;
-        fcntl(fserver_fd, F_SETFL, fl);
-
-        int b = send(fserver_fd, filename, strlen(filename), 0);
+        send(fserver_fd, filename, strlen(filename), 0);
         int file_size;
-        int a = recv(fserver_fd,(char*)&file_size, 4, 0);
+        recv(fserver_fd,(char*)&file_size, 4, 0);
         if (file_size != 0) {
-            char buff[4096];
+            char *buff = calloc(1, 4096);
             if (file_size > 0) {
-                file_data = (char *) malloc(file_size);
-                while(recv(fserver_fd, buff, 100, 0) > 0 ) {
-                    strcat(file_data, buff);
-                    memset(buff, 0 , 100);
-                }
+                file_data = (char *) calloc(1, file_size);
+                int i;
+                int pos = 0;
+                while((i = recv(fserver_fd, buff, 1024, 0)) > 0 ) {
+                    memcpy(file_data+pos, buff, i);
+                    memset(buff, 0 , 1024);
+                    pos +=i;
+                } 
             }
         }
-    }else {
-        fprintf(stderr, "Can't connect to file server: %s\n", strerror(errno));
+        f.size = file_size;
+        f.data = file_data;
     }
     shutdown(fserver_fd, SHUT_RDWR);
     close(fserver_fd);
-    printf("conection closed\n");
-    return file_data;
+    return f;
 }
 
 int get_file_size(FILE *fp) {
