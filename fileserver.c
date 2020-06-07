@@ -16,21 +16,21 @@
 #define SA struct sockaddr
 
 void sentFile(int sockfd, const char *file_name, int size) { 
-    char buff[MAX];     
+    char buff[1025];     
 
-    FILE *fp;
-    fp=fopen(file_name,"r");  
-    if( fp == NULL ){
-    printf("Error IN Opening File .. \n");
-    return ;
+    int fp;
+    fp=open(file_name,O_RDONLY);  
+    if( fp == -1 ){
+        printf("Error IN Opening File..\n");
+        return ;
     }
-    
-    while ( fgets(buff,MAX,fp) != NULL ) {
-        send(sockfd,buff,MAX,0);  
-        memset(buff, 0, MAX);
+    int i;
+    while (( i = read(fp, buff, 1024)) != 0 ) {
+        send(sockfd,buff,i,0);  
+        memset(buff, 0, 1024);
 
     }
-    fclose (fp);  
+    close (fp);  
     
     printf("File Sent successfully !!! \n");
     
@@ -44,7 +44,7 @@ long int findSize(const char *file_name) {
         size = ftell(fp);
         rewind(fp);
     }
-    printf("%d\n", size);
+    fclose(fp);
     return size;
 }
 
@@ -130,15 +130,14 @@ int main() {
 		for (int i = 0; i < MAX_CLIENT; i++) {
 			if (connfd[i] > 0 && FD_ISSET(connfd[i], &set)) {
 				if (read(connfd[i], filename, sizeof(filename)) > 0) {
-                    printf("%s\n", filename);
+                    
                     
                     fsize = findSize(filename);
-                    if ((fsize > 0) && (fsize < 9999)) {
+                    send(connfd[i], (char*)&fsize, 4, 0);
+                    if (fsize > 0) {
                         printf("Sending file\n");
-                        send(connfd[i], (char*)&fsize, 4, 0);
                         sentFile(connfd[i], filename,fsize);
-                    } else
-                        send(sockfd, "\0\0\0\0", 4, 0);
+                    }
                     shutdown(connfd[i],SHUT_RDWR);
                     close(connfd[i]);
 					connfd[i] = 0;
@@ -149,6 +148,7 @@ int main() {
                     close(connfd[i]);
 					connfd[i] = 0;
 				}
+                memset(filename, 0, sizeof(filename));
                 break;
 			} 
 		}
