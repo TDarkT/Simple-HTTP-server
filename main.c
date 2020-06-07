@@ -1,4 +1,5 @@
 #include "server.h"
+#include "file_lib.h"
 #include <pthread.h>
 #include <sys/select.h>
 #include <fcntl.h>
@@ -10,6 +11,7 @@ int main(int argc, char** argv) {
         printf("Usage: %s [port]\n",argv[0]);
         exit(1);
     }
+    int files_fd = init_fserver_sk("127.0.0.1");  
     int server_fd = server_init(atoi(argv[1]));
     while (1) {
         fd_set set;
