@@ -4,15 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <netdb.h>
 struct http_header {
     char method[4];
     char* ip;
     char* path;
+    char* type;
     char* request;
-    
+    char* cookies;
 };
 
 struct http_header parse_http_req(char *buff, struct sockaddr_in addr);

@@ -4,7 +4,18 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
+#define isType(x) strcmp(ext, x) == 0
+char *get_file_type(char *path) {
+    char *ext =strdup(path);
+    ext = strtok(ext, ".");
+    ext = strtok(NULL, ".");
+    if (isType("html")) return "text/html";
+    if (isType("css")) return "text/css";
+    if (isType("js")) return "application/javascript";
+    if (isType("jpg")) return "image/jpeg";
+    if (isType("png")) return "image/png";
+    if (isType("gif")) return "image/gif";
+}
 struct http_header parse_http_req(char* buff,struct sockaddr_in addr) {
      struct http_header h;
      int length = 0;
@@ -19,6 +30,8 @@ struct http_header parse_http_req(char* buff,struct sockaddr_in addr) {
      }
      while (*(headers[0]+4+length) != ' ') length++;
      h.request = headers[0];
+     h.cookies = headers[i-2];
+     set_cookie(h.cookies+8);
      h.request[strlen(h.request) - 1] ='\0';
      h.path = (char*) malloc(length+1);
      strncpy(h.path, h.request+4, length);
@@ -47,9 +60,9 @@ char* http_respone_200(struct http_header req, char* data,int size) {
      char time_str[100];
      char *header = malloc(1000);
      strftime(time_str, 100, "%a, %d %b %G %T GMT", ptm);
+         
      
-     sprintf(header, "HTTP/1.1 200 OK \nDate:%s\nServer:USTH\nContent-Length: %d\nContent-type: text/html\nConnection: Closed\n\n", time_str, size);
-     
+     sprintf(header, "HTTP/1.1 200 OK\nDate:%s\nServer:USTH\nContent-Length: %d\nContent-Type: %s\nConnection: close\n\n", time_str, size,get_file_type(req.path));
      header = realloc(header, strlen(header)+size+1);
      http_logging(req, ptm, strlen(header)+size, 200);
      return header;
