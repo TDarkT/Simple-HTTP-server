@@ -10,9 +10,8 @@
 #include "server.h"
 #define MAX_CONN 100
 
-extern int signal;
 int opt = 1;
-int server_fd, client_fd[30];
+int server_fd; 
 struct sockaddr_in addr;
 socklen_t ad_length = sizeof(addr);
 int server_init(int port) {
@@ -68,7 +67,8 @@ void* client_connect(void *arg) {
     	    char path[80] = ".";
     	    strcat(path, req_h.path);
             // Get requested file
-    	    char *f_data = get_file(path); 
+            struct file f = get_file(path);
+    	    char *f_data = f.data;
     	    if (f_data == NULL) {
                 FILE *fp;
                 fp = fopen("./404.html", "rb");
@@ -77,13 +77,14 @@ void* client_connect(void *arg) {
                 char *header = http_respone_404(req_h, NULL, size);
                 strcat(header, data);
                 send(client_fd, header, strlen(header), 0);
-                
+            
             } else {
-    	        int size = strlen(f_data);
+    	        int size = f.size;
                 //char *data = get_file_content(fp, size);
                 char *header = http_respone_200(req_h, NULL, size);
-    	        strcat(header, f_data);
-	            send(client_fd, header, strlen(header), 0);
+                int header_size = strlen(header);
+                memcpy(header+strlen(header),f_data,size);
+                send(client_fd, header, header_size+size, 0);
              }
     	     shutdown(client_fd, SHUT_RDWR);
     	     close(client_fd); 
