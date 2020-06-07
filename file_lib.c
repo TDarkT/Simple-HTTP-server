@@ -51,9 +51,9 @@ struct file get_file(char* filename) {
                 } 
             }
         }
-        f.size = file_size;
-        f.data = file_data;
+        f.size = file_size; 
     }
+    f.data = file_data;
     shutdown(fserver_fd, SHUT_RDWR);
     close(fserver_fd);
     return f;
